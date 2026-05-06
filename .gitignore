@@ -2,7 +2,6 @@
 __pycache__
 
 /data**/
-/gen_logs**/
 /logs**/
 /model_weights**/
 /runs**/
