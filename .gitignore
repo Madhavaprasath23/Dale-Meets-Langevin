@@ -1,0 +1,9 @@
+/records/** 
+__pycache__
+
+/data**/
+/gen_logs**/
+/logs**/
+/model_weights**/
+/runs**/
+/mnist_exps/data**/
