@@ -1,4 +1,4 @@
-# Dale Meets Langevin
+# Dale Meets Langevin A Multiplicative Denoising Diffusion Model
 
 Pytorch Implementation for the paper Dale Meets Langevin, https://arxiv.org/pdf/2510.02730
 
