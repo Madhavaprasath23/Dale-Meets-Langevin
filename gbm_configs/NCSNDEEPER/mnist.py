@@ -44,18 +44,13 @@ def get_config_sampling(path,device):
 
     def update_configs(sampling_config):
         if sampling_config.sampler_mode == 'ums':
-            if sampling_config.start_from_average:
-                delta = 2e-4
-                L = 4
-                anneal_factor = 0.995
-            else:
-                delta = 0.00011421052631578947
-                L = 6
-                anneal_factor = 0.995
+            delta = 1.43e-4
+            L = 4
+            anneal_factor = 0.995
         elif sampling_config.sampler_mode == 'dls':
-            delta = 0.00011421052631578947
-            L = 6
-            anneal_factor = 0.9995
+            delta = 6.06e-4
+            L = 1
+            anneal_factor = 0.995
         sampling_config.delta = delta
         sampling_config.L = L
         sampling_config.anneal_factor = anneal_factor

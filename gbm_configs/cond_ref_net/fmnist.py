@@ -14,7 +14,7 @@ def get_config_training():
         transforms.ToTensor()
     ])
     training_config.transforms=datasets.FashionMNIST(
-        root='./data',train=True,download=True,transform=transform
+        root='./data',train=True,download=True,transform=training_config.transforms
     )
     training_config.N = N =1000
     training_config.sigma = sigmas =0.8* torch.ones(N)

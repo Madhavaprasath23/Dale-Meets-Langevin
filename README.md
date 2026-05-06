@@ -5,13 +5,6 @@ Pytorch Implementation for the paper Dale Meets Langevin, https://arxiv.org/pdf/
 *This repository is extended from the [NCSNv3 repository by Song et al.](https://github.com/yang-song/score_sde_pytorch)*
 
 
-## Features
-- **GBM Diffusion Formulation**: Includes custom loss formulations (`gbm_loss`, `new_loss`) adapted for Geometric Brownian Motion.
-- **Multiple Architectures**: Supports flexible model backends including `NCSN++` (NCSNV3), `NCSNDeeper`, and `CondRefineNetDilated`.
-- **Configurable**: Heavy use of modular configurations separated into Python mapping files (`gbm_configs/`) and YAML files (`yamal_configs/`).
-- **Unified Entrypoint**: A single `main.py` entrypoint to orchestrate both training and sampling across all datasets and models.
-- **Customizable Sampling**: Modular sampling logic (`mnist_exps/sampling.py`) defining both vanilla iterative GBM and placeholder wrappers for custom sampling loop implementations.
-
 ## Project Structure
 
 ```text
@@ -98,7 +91,7 @@ The `main.py` script arguments are logically grouped as follows. You can view th
 - `--model_path`: Path to an existing model checkpoint for sampling or resume.
 
 **Sampling Configuration:**
-- `--sampler_mode`: SDE solver / sampler mode to use (`dls` or `ums`). Default is `dls`.
+- `--sampler_mode`: sampler mode to use (`dls` or `ums`). Default is `dls`.
 - `--sampler_batch_size`: Batch size used during sampling. Default is `2048`.
 - `--num_of_samples`: Total number of samples to generate. Default is `50000`.
 - `--noise_start_point`: Initialization point for the diffusion sampling process (`class_averaged` or `noise`). Default is `noise`.
@@ -118,6 +111,6 @@ The `main.py` script arguments are logically grouped as follows. You can view th
 ## Configuration Details
 The project utilizes a tiered configuration system where the original architecture configurations are defined in YAML, and our custom GBM variables are extended on top via Python scripts.
 
-1. **Python Configs (`gbm_configs/`)**: These configs (available for `NCSNDEEPER`, `CONDREF`, and `NCSNV3`) extend the base model parameters with GBM-specific hyperparameters. They define PyTorch `transforms`, target `batch_size`, learning rates, and time-dependent noise schedules (`mu`, `sigma`, `delta`).
-   - Advanced UI toggles like `config.interactive = True`, `config.show_progress = True`, and `config.do_tweedie = True` (Tweedie's formula correction during sampling) live here.
+1. **Python Configs (`gbm_configs/`)**: These configs (available for `NCSNDEEPER`, `CONDREF`, and `NCSNV3`) extend the base model parameters with GBM-specific hyperparameters. They define PyTorch `transforms`, target `batch_size`, learning rates, and time-dependent noise schedules (`mu`, `sigma`).
+   - UI toggles like `config.interactive = True`, `config.show_progress = True`, and `config.do_tweedie = True` (Tweedie's formula correction during sampling) live here.
 2. **YAML Configs (`yamal_configs/`)**: These are the original structural parameter files for the baseline models (e.g., detailing `num_scales`, `channels`, `ngf` sizes).

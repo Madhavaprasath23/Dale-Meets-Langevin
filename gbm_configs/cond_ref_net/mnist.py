@@ -14,7 +14,7 @@ def get_config_training():
         transforms.ToTensor()
     ])
     training_config.transforms=datasets.MNIST(
-        root='./data',train=True,download=True,transform=transform
+        root='./data',train=True,download=True,transform=training_config.transforms
     )
     training_config.multi_gpu_training=False
     training_config.n_iters = 100000
