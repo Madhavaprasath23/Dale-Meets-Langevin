@@ -8,6 +8,7 @@ from torchvision import datasets, transforms
 from utils import *
 from tqdm import tqdm
 from torcheval.metrics import FrechetInceptionDistance
+#from torchfidelity import calculate_metrics
 
 class Calculate_metrics():
     def __init__(self,num_subsets=64, max_subset_size=64,device='cuda'):
@@ -168,3 +169,10 @@ def calculate_fid_kid_tensor(fake_images_tensor,data_set='mnist',device='cuda',b
             if start>=num_samples:
                 break
     return fid_calculator.calculate_metrics()
+
+
+def calculate_MIND(fake_image_path,real_image_path,num_samples=5_000):
+    metrics = calculate_metrics(fake_image_path,real_image_path,num_samples=num_samples)
+    print("Metrics",metrics)
+
+    return metrics

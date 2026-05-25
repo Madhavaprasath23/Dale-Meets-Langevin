@@ -258,4 +258,3 @@ def train_model(config):
         save_check_point(check_point,config.save_path+'/'+str(step), f"{config.save_path}/{step}/{config.run_name}.pth")
 
 
-

@@ -43,7 +43,7 @@ def get_config_training():
 
     return training_config
 
-def get_config_sampling(path,device):
+def get_config_sampling(path):
 
     sampling_config = ml_collections.ConfigDict()
     sampling_config.config_path = "yamal_configs/cond_ref_net/anneal_mnist.yml"
@@ -52,7 +52,6 @@ def get_config_sampling(path,device):
     sampling_config.path = path
     sampling_config.batch_size=batch_size = 32
     sampling_config.num_gpus=1
-    sampling_config.device = device
     sampling_config.data_set = 'k-mnist'
     sampling_config.save_path = "logs"
     sampling_config.shape = (batch_size,3,32,32)

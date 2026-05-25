@@ -12,7 +12,7 @@ from PIL import Image
 from torchvision import datasets, transforms
 from torchvision.datasets import VisionDataset
 from torch.utils.data import DataLoader, Dataset
-import torch.utils as vutils
+import torchvision.utils as vutils
 import yaml
 
 
@@ -26,7 +26,7 @@ def batch_save_tensors(tensor_list, output_dir="output_images",prefix='image_'):
             tensor = tensor.squeeze(0)
             
         file_path = os.path.join(output_dir, f"{prefix}{i}.png")
-        vutils.save_image(tensor, file_path, normalize=True)
+        vutils.save_image(tensor, file_path)
 
 
 def give_class_average_image(train_dataset):

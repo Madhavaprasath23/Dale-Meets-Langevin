@@ -40,20 +40,20 @@ def get_config_training():
     training_config.summary_writer = SummaryWriter(log_dir=training_config.summary_log_dir)
     return training_config
 
-def get_config_sampling(path,device):
+def get_config_sampling(path):
 
     def update_configs(sampling_config):
         if sampling_config.sampler_mode == 'ums':
             if sampling_config.start_from_average:
-                delta = 3.30e-4
+                delta = 0.0003359818286283781
                 L = 2
                 anneal_factor = 0.995
             else:
-                delta = 2.11e-4
+                delta = 0.00021131578947368424
                 L = 3
                 anneal_factor = 1.0
         elif sampling_config.sampler_mode == 'dls':
-            delta = 2.11e-4
+            delta = 0.00021131578947368424
             L = 3
             anneal_factor = 0.995
         sampling_config.delta = delta

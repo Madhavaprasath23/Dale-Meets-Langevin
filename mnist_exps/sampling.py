@@ -16,9 +16,11 @@ import torch
 from utils import *
 from pathlib import Path
 
+from gbm_configs.NCSNV3.cifar10 import get_config_sampling as get_config_sampling_ncsnv3_cifar10
+
 """
-DLS: Dale Langevin Sampler
-UMS: Unconstrained Multiplicative Sampler
+adls: Dale Langevin Sampler
+aums: Unconstrained Multiplicative Sampler
 """
 
 def convert_ddp_to_normal(state_dict):
@@ -77,7 +79,7 @@ def make_lognormal_noise(mean, std_dev, nosiy_image, device='cuda'):
     return log_normal_noise
 
 
-def sample_one_step_no_hacks(test_image, model, device, save_path, mu, sigmas, N, delta,mu_fit,sigma_fit, batch_size=64, data_set='mnist', show=True, L=1,constant=False,current_step=0,sampler_mode='dls',do_tweedie=False,config=None,show_text=False):
+def sample_one_step_no_hacks(test_image, model, device, save_path, mu, sigmas, N, delta,mu_fit,sigma_fit, batch_size=64, data_set='mnist', show=True, L=1,constant=False,current_step=0,sampler_mode='adls',do_tweedie=False,config=None,show_text=False):
     """
     Generate samples from a trained score-based model using one-step 
     iterative refinement without additional heuristics.
@@ -128,16 +130,21 @@ def sample_one_step_no_hacks(test_image, model, device, save_path, mu, sigmas, N
     config.rank = dist.get_rank() if config.multi_gpu else 0
     if show_text:
         config.show_progress = False
+    
+    print(f"Starting sampling with sampler_mode: {config.sampler_mode}, delta {delta}, L {L}, dotweedie: {do_tweedie} class_average start: {config.start_from_average}")
     with torch.no_grad():
         if data_set != 'cifar10':
-            mu_fit, sigma_fit = mu_fit,sigma_fit
-            x_now = torch.exp(mu_fit + sigma_fit *
-                              torch.randn_like(test_image).to(device)).float()
-            #x_now=torch.load(f'noise_{data_set}.pt',map_location=device)
+            if config.start_from_average:
 
-            if show:
-                show_grid(x_now.detach().cpu(), title='Pure Noise', step=0,
-                          dataset=data_set, save_path=save_path, gen=True)
+            else:
+                mu_fit, sigma_fit = mu_fit,sigma_fit
+                x_now = torch.exp(mu_fit + sigma_fit *
+                                torch.randn_like(test_image).to(device)).float()
+                #x_now=torch.load(f'noise_{data_set}.pt',map_location=device)
+
+                if show:
+                    show_grid(x_now.detach().cpu(), title='Pure Noise', step=0,
+                            dataset=data_set, save_path=save_path, gen=True)
 
         else:
             if config.start_from_average:
@@ -192,10 +199,10 @@ def sample_one_step_no_hacks(test_image, model, device, save_path, mu, sigmas, N
 
             sigma_t = sigmas[N-t-1]
             mu_t = mu[N-t-1]
-            if sampler_mode == 'dls':
-                x_now,score = dls_sampler(x_now,current_t,delta,sigma_t,mu_t,anneal,model,device,L,N,t,show_text=show_text)
+            if sampler_mode == 'adls':
+                x_now,score = adls_sampler(x_now,current_t,delta,sigma_t,mu_t,anneal,model,device,L,N,t,show_text=show_text)
             else:
-                x_now,score = ums_sampler(x_now,current_t,delta,sigma_t,mu_t,anneal,model,device,L,N,t,show_text=show_text)
+                x_now,score = aums_sampler(x_now,current_t,delta,sigma_t,mu_t,anneal,model,device,L,N,t,show_text=show_text)
 
             anneal = anneal * factor
             if torch.sum(torch.isnan(x_now)):
@@ -221,14 +228,18 @@ def sample_one_step_no_hacks(test_image, model, device, save_path, mu, sigmas, N
             print(f"After clamping : Maximum:{temp.max()}Minimum:{temp.min()}")
             show_grid(temp.detach().cpu(), save_path=save_path,
                       title=f"Generated Images", step=N-(t+1), dataset=data_set, gen=True)
-        
+        torch.save(x_now.detach().cpu(), f"{save_path}/final_samples_without_tweedie_{current_step}_{config.rank}.pt")
         if do_tweedie:
-            temp = x_now.clone().cpu()
             for step in tqdm(range(config.tweedie_steps), desc='Tweedie') if config.show_progress else range(25):
                 current_t = torch.full((batch_size,), 0,
                                     dtype=torch.long).to(device, dtype=torch.long)
                 score = model(x_now.float(),current_t)
-                x_now = x_now * torch.exp(delta * (sigma_t ** 2) * (x_now * score) - delta * (mu_t - 1.5 * (sigma_t**2)) * torch.ones_like(x_now))
+                if config.sampler_mode == 'adls':
+                    x_now = adls_denoiser(x_now, score, delta, sigma_t, mu_t)
+                else:
+                    x_now = aums_denoiser(x_now, score, delta, sigma_t, mu_t)
+                
+                temp = x_now.clone().cpu()
                 if config.display_tweedie_images_intermediate:
                     temp= torch.clamp(x_now,1.0,2.0) - 1.0
                     if os.path.exists(save_path+'/tweedie') == False:
@@ -238,7 +249,7 @@ def sample_one_step_no_hacks(test_image, model, device, save_path, mu, sigmas, N
                         temp.detach().cpu(), f"{save_path}/tweedie/tweedie_{step}.png", normalize=True
                     )
                     batch_save_tensors(temp.detach().cpu(), save_path=save_path+'/tweedie', prefix=f'tweedie_{step}_')
-
+                torch.save(x_now.detach().cpu(), f"{save_path}/final_samples_with_tweedie_{current_step}_{step}_{config.rank}.pt")
                 if show:
                     temp = torch.clamp(x_now.clone(), 1.0, 2.0) - \
                             1.0
@@ -316,12 +327,12 @@ def optimal_sampler(config):
         - A fixed noise schedule (`sigmas`, `mu`) with `N=1000` steps is used.
         - Intermediate and final samples are visualized with `show_grid` if `show=True`.
     """
+    if config.multi_gpu:
+        dist.init_process_group(backend='nccl')
 
     config.rank = dist.get_rank() if config.multi_gpu else 0
     config.device = torch.device(f'cuda:{config.rank}' if torch.cuda.is_available() else 'cpu')
 
-    if config.multi_gpu:
-        dist.init_process_group(backend='nccl', rank=config.rank, world_size=config.num_gpus)
 
     if config.save_path:
         if config.show:
@@ -335,6 +346,7 @@ def optimal_sampler(config):
         model_config = config.config
         model_config.device = config.device
         model = config.model_class(config=model_config)
+    
     sd = torch.load(config.path,map_location=config.device)
     try:
         sd_n = sd['model_state_dict']
@@ -345,12 +357,13 @@ def optimal_sampler(config):
         model.load_state_dict(sd_w)
     except:
         model.load_state_dict(sd_w)
-
     model = model.to(config.device)
-    if config.num_gpus > 1:
-        model = DDP(model, device_ids=[config.rank],output_device=config.rank)
-    model.eval()
 
+    print(f"Model loaded on device {config.device},{config.num_gpus>1} GPUs available, multi_gpu: {config.multi_gpu}")
+    if config.num_gpus > 1:
+        model = DDP(model,device_ids=[config.rank],output_device=config.rank) if config.multi_gpu else model.to(config.device)
+    model.eval()
+    print("completed model setup")
     N = 1000
 
     sigmas = 0.8 * torch.ones(N).to(config.device)
@@ -385,7 +398,7 @@ def optimal_sampler(config):
             total_samples = torch.cat((total_samples, temp), dim=0)
     return total_samples.detach().cpu()
 
-def dls_sampler(x_now,current_t,delta,sigma_t,mu_t,anneal,model,device,L,N,t,show_text):
+def adls_sampler(x_now,current_t,delta,sigma_t,mu_t,anneal,model,device,L,N,t,show_text):
     """Mode 1 - GBM iterative score-based sampling.
 
     Wraps `optimal_sampler`. All parameters are read from `config`.
@@ -407,7 +420,18 @@ def dls_sampler(x_now,current_t,delta,sigma_t,mu_t,anneal,model,device,L,N,t,sho
 
 
 
-def ums_sampler(x_now,current_t,delta,sigma_t,mu_t,anneal,model,device,L,N,t,show_text):
+def adls_denoiser(x_now,score,delta,sigma_t,mu_t):
+    return x_now * torch.exp(delta * (sigma_t ** 2) * (x_now * score) - delta * (mu_t - 1.5 * (sigma_t**2)) * torch.ones_like(x_now))
+   
+
+def aums_denoiser(x_now,score,delta,sigma_t,mu_t):
+    return x_now * ((1+2*delta*sigma_t**2) * torch.ones_like(x_now) #(1 + 2δσ2)1 
+
+    - (delta*mu_t * torch.ones_like(x_now)) + #δμ
+        
+        (delta*sigma_t**2 * (x_now * score)))
+
+def aums_sampler(x_now,current_t,delta,sigma_t,mu_t,anneal,model,device,L,N,t,show_text):
     for _ in range(L):
         score = model(x_now, current_t)
         
@@ -436,13 +460,13 @@ def run_sampler(config):
 
     Args:
         config: Sampling configuration object.
-        sampler_mode (str): 'dls' or 'ums'.
+        sampler_mode (str): 'dls' or 'aums'.
         constant (bool): Passed to mode 1 only.
 
     Returns:
         torch.Tensor: Generated samples.
     """
-    if config.sampler_mode in ['dls','ums']:
+    if config.sampler_mode in ['adls','aums']:
         return optimal_sampler(config)
     else:
-        raise ValueError(f"Unknown sampling mode: {config.sampler_mode}. Choose 'dls' or 'ums'.")
+        raise ValueError(f"Unknown sampling mode: {config.sampler_mode}. Choose 'adls' or 'aums'.")

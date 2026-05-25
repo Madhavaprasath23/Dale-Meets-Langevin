@@ -40,8 +40,8 @@ from mnist_exps.nearest_neighbours import nearest_neighbours
 from torch.distributed.launcher.api import LaunchConfig,elastic_launch
 
 """
-DLS: Dale Langevin Sampler
-UMS: Unconstrained Multiplicative Sampler
+adls: Annealed Dale Langevin Sampler
+aums: Annealed Unconstrained Multiplicative Sampler
 """
 
 def run_distributed(config,num_gpus,port,func):
@@ -98,7 +98,7 @@ def main():
 
     # Sampling Arguments
     sample_group = parser.add_argument_group('Sampling Configuration')
-    sample_group.add_argument('--sampler_mode', type=str, choices=['dls', 'ums'], default='dls', help='sampler mode to use (e.g., Dale-Langevin Sampler (dls) or Unconstrained Multiplicative Sampler (ums)).')
+    sample_group.add_argument('--sampler_mode', type=str, choices=['adls', 'aums'], default='adls', help='sampler mode to use (e.g., Dale-Langevin Sampler (adls) or Unconstrained Multiplicative Sampler (aums)).')
     sample_group.add_argument('--sampler_batch_size', type=int, default=2048, help='Batch size used during sampling.')
     sample_group.add_argument('--num_of_samples', type=int, default=50000, help='Total number of samples to generate.')
     sample_group.add_argument('--noise_start_point', type=str, choices=['class_averaged', 'noise'], default='noise', help='Initialization point for the diffusion sampling process.')
@@ -140,18 +140,21 @@ def main():
         config = get_sampler_config(args)
         config = config(args.model_path)
         config.multi_gpu = args.num_gpus > 1
+        config.sampler_mode = args.sampler_mode
 
         config.batch_size= args.sampler_batch_size if args.num_of_samples >= args.sampler_batch_size else args.num_of_samples
         config.num_samples = args.num_of_samples
-        config.save_path = f'logs/{args.dataset}_runs_{args.model}/{config.num_samples}'
+        config.save_path = args.save_path
+        config.show = False
         try:
-            os.makedirs(config.save_path)
+            os.makedirs(config.save_path,exist_ok=True)
         except:
             config.save_path = f'logs/{args.dataset}_runs@{time.time()}_{args.model}/{config.num_samples}'
             os.makedirs(config.save_path)
+        print("saving @",config.save_path)
         config.display_tweedie_images_intermediate = args.display_tweedie_images_intermediate
         config.start_from_average = False if args.noise_start_point == 'noise' else True
-        if config.start_from_average and os.path.existdir(f'logs/class_average/{config.data_set}'):
+        if config.start_from_average and os.path.exists(f'logs/class_average/{config.data_set}'):
             os.makedirs(f'logs/class_average/{config.data_set}',exist_ok=True)
             class_averaged_images = class_average_image(config.data_set)
             batch_save_tensors(class_averaged_images,output_dir=f'logs/class_average/{config.data_set}')
@@ -159,18 +162,19 @@ def main():
 
 
         if args.num_gpus > 1:
+            print(f"Running in distributed mode with {args.num_gpus} GPUs on port {args.port}")
             config.num_gpus = args.num_gpus
             config.port = args.port
 
             total_samples_gpu = run_distributed(config,args.num_gpus,args.port,run_sampler)
             #all gather the samples from different gpus and save
-            total_samples = [torch.zeros_like(total_samples) for _ in range(config.num_gpus)]
+            """total_samples = [torch.zeros_like(total_samples_gpu) for _ in range(config.num_gpus)]
             torch.distributed.all_gather(total_samples,total_samples_gpu)
-            total_samples = torch.cat(total_samples,dim=0)
+            total_samples = torch.cat(total_samples,dim=0)"""
         else:
             total_samples = run_sampler(config)
         
-        total_samples = total_samples[:config.num_samples].detach().cpu()
+        #total_samples = total_samples[:config.num_samples].detach().cpu()
 
         if args.mode == 'calculate_fid':
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -185,8 +189,8 @@ def main():
                 f.write(f'FID: {fid.item()}\n')
                 f.write(f'KID: {kid.item()}\n')
         
-        if args.save_samples:
-            batch_save_tensors(total_samples,config.save_path)
+        """if args.save_samples:
+            batch_save_tensors(total_samples,config.save_path)"""
     elif args.mode == 'nearest_neighbors':
         #load the generated samples and calculate nearest neighbors from the training set
         config = get_sampler_config(args)

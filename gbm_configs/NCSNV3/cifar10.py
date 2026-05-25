@@ -64,14 +64,9 @@ def get_config_sampling(path):
 
     def update_configs(sampling_config):
         if sampling_config.sampler_mode == 'ums':
-            if sampling_config.start_from_average:
-                delta = 2e-4
-                L = 4
-                anneal_factor = 0.995
-            else:
-                delta = 0.00011421052631578947
-                L = 6
-                anneal_factor = 0.995
+            delta = 0.000143844988828766
+            L = 5
+            anneal_factor = 0.9995
         elif sampling_config.sampler_mode == 'dls':
             delta = 0.00011421052631578947
             L = 6
@@ -81,7 +76,6 @@ def get_config_sampling(path):
         sampling_config.anneal_factor = anneal_factor
         return sampling_config
         
-
     sampling_config = ml_collections.ConfigDict()
     sampling_config.model_config = get_config
     sampling_config.model_class = NCSNpp
@@ -112,6 +106,7 @@ def get_config_sampling(path):
     sampling_config.show_progress = True
     sampling_config.show_intermediate = False
     sampling_config.show_text = False
+    sampling_config.tweedie_steps = 25
 
 
     

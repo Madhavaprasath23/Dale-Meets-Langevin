@@ -40,15 +40,15 @@ def get_config_training():
     return training_config
 
 
-def get_config_sampling(path,device):
+def get_config_sampling(path):
 
     def update_configs(sampling_config):
         if sampling_config.sampler_mode == 'ums':
-            delta = 1.43e-4
+            delta = 0.000143844988828766
             L = 4
             anneal_factor = 0.995
         elif sampling_config.sampler_mode == 'dls':
-            delta = 6.06e-4
+            delta = 0.0006165454545454547
             L = 1
             anneal_factor = 0.995
         sampling_config.delta = delta
@@ -62,7 +62,6 @@ def get_config_sampling(path,device):
     sampling_config.path = path
     sampling_config.batch_size=batch_size = 32
     sampling_config.num_gpus=1
-    sampling_config.device = device
     sampling_config.data_set = 'mnist'
     sampling_config.save_path = "logs"
     sampling_config.shape = (batch_size,1,28,28)
@@ -87,7 +86,6 @@ def get_config_sampling(path,device):
         
     sampling_config.interactive = True
     sampling_config.show_progress = True
-    sampling_config.anneal_factor = 0.9995
     sampling_config.show_intermediate = False
 
     return sampling_config
