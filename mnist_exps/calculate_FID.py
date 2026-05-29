@@ -55,10 +55,6 @@ def calculate_fid_kid(path,data_set='mnist',num_samples=50_000,device='cuda'):
     if data_set == 'mnist':
         test_dataset = datasets.MNIST(
             root='./data', train=False, download=True)
-    elif data_set == 'celeb-a':
-        test_dataset = CelebADataset(
-            root='/home/nishanth/gbm2d/mnist_exps/data/img_align_celeba/celeba',
-        )
     elif data_set == 'fashion-mnist':
         test_dataset = datasets.FashionMNIST(
             root='./data', train=False, download=True)
