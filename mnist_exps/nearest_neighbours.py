@@ -116,7 +116,6 @@ def nearest_neighbours(path,save_path,data_set = 'mnist',num_samples = 10,device
                 all_features.append(images)
 
     all_features = torch.cat(all_features, dim=0)
-    print(all_features.shape)
     all_features = all_features.to(device)
 
     generated_images = take_first_n_images(path, num_samples)
@@ -128,7 +127,6 @@ def nearest_neighbours(path,save_path,data_set = 'mnist',num_samples = 10,device
         if data_set!='cifar10':
             generated_samples = generated_samples.repeat(1, 3, 1, 1)  
         generated_samples = generated_samples.to(device)
-        print(generated_samples.shape)
         generated_samples = model(generated_samples)
     else:
         generated_samples = torch.stack([transforms.Compose([
@@ -136,9 +134,7 @@ def nearest_neighbours(path,save_path,data_set = 'mnist',num_samples = 10,device
         ])(img) for img in generated_images])
         generated_samples = generated_samples.repeat(1, 1, 1, 1)
         generated_samples = generated_samples.to(device)
-    print(generated_samples.shape)
     indices = get_nearest_neighbours(all_features, generated_samples, num_samples,mode=mode)
-    print(indices)
     im=[]
     for i in range(len(indices)):
         mat=[]

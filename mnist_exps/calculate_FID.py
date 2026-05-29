@@ -98,8 +98,6 @@ def calculate_fid_kid(path,data_set='mnist',num_samples=50_000,device='cuda'):
             fake_images = torch.stack(fake_images).unsqueeze(1)
             fake_images = fake_images.to(dtype=torch.uint8,device=device)
             fake_images = fake_images.repeat(1,3,1,1)
-            print(real_images.shape,fake_images.shape)
-
             fid_kid_calculator.update_fake_images(fake_images)
     print("Calculating FID and KID scores...")
     print("FID and KID",fid_kid_calculator.calculate_metrics())
@@ -167,9 +165,3 @@ def calculate_fid_kid_tensor(fake_images_tensor,data_set='mnist',device='cuda',b
                 break
     return fid_calculator.calculate_metrics()
 
-
-def calculate_MIND(fake_image_path,real_image_path,num_samples=5_000):
-    metrics = calculate_metrics(fake_image_path,real_image_path,num_samples=num_samples)
-    print("Metrics",metrics)
-
-    return metrics

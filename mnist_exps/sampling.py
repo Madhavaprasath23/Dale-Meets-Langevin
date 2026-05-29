@@ -140,7 +140,6 @@ def sample_one_step_no_hacks(test_image, model, device, save_path, mu, sigmas, N
                 mu_fit, sigma_fit = mu_fit,sigma_fit
                 x_now = torch.exp(mu_fit + sigma_fit *
                                 torch.randn_like(test_image).to(device)).float()
-                #x_now=torch.load(f'noise_{data_set}.pt',map_location=device)
 
                 if show:
                     show_grid(x_now.detach().cpu(), title='Pure Noise', step=0,
@@ -228,7 +227,6 @@ def sample_one_step_no_hacks(test_image, model, device, save_path, mu, sigmas, N
             print(f"After clamping : Maximum:{temp.max()}Minimum:{temp.min()}")
             show_grid(temp.detach().cpu(), save_path=save_path,
                       title=f"Generated Images", step=N-(t+1), dataset=data_set, gen=True)
-        torch.save(x_now.detach().cpu(), f"{save_path}/final_samples_without_tweedie_{current_step}_{config.rank}.pt")
         if do_tweedie:
             for step in tqdm(range(config.tweedie_steps), desc='Tweedie') if config.show_progress else range(25):
                 current_t = torch.full((batch_size,), 0,
@@ -249,7 +247,6 @@ def sample_one_step_no_hacks(test_image, model, device, save_path, mu, sigmas, N
                         temp.detach().cpu(), f"{save_path}/tweedie/tweedie_{step}.png", normalize=True
                     )
                     batch_save_tensors(temp.detach().cpu(), save_path=save_path+'/tweedie', prefix=f'tweedie_{step}_')
-                torch.save(x_now.detach().cpu(), f"{save_path}/final_samples_with_tweedie_{current_step}_{step}_{config.rank}.pt")
                 if show:
                     temp = torch.clamp(x_now.clone(), 1.0, 2.0) - \
                             1.0
