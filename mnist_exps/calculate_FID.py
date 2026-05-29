@@ -116,12 +116,9 @@ def calculate_fid_kid_tensor(fake_images_tensor,data_set='mnist',device='cuda',b
     elif data_set == 'cifar10':
         test_dataset = datasets.CIFAR10(
             root='./data', train=False, download=True,transform=transforms.ToTensor())
-    elif data_set == 'celeb-a':
-        test_dataset = CelebADataset(
-            root='/home/nishanth/gbm2d/mnist_exps/data/img_align_celeba/celeba',
-        )
     elif data_set == 'k-mnist' or 'kmnist':
-        test_dataset = K_Mnist(path="mnist_exps/data/K-mnist/kmnist-test-imgs.npz")
+        test_dataset = datasets.KMNIST(
+            root='./data', train=False, download=True,transform=transforms.ToTensor())
     
     test_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
