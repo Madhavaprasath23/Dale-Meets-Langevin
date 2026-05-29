@@ -65,8 +65,9 @@ def calculate_fid_kid(path,data_set='mnist',num_samples=50_000,device='cuda'):
     elif data_set == 'cifar10':
         test_dataset = datasets.CIFAR10(
             root='./data', train=True, download=True,transform=transforms.ToTensor())
-    elif data_set == 'K-Mnist': #/home/nishanth/gbm2d/mnist_exps/data/K-mnist/kmnist-train-imgs.npz
-        test_dataset = K_Mnist(path="/home/nishanth/gbm2d/mnist_exps/data/K-mnist/kmnist-test-imgs.npz")
+    elif data_set == 'k-mnist' or data_set=='kmnist':
+        test_dataset = datasets.KMNIST(
+            root='./data', train=False, download=True,transform=transforms.ToTensor())
 
     test_loader = torch.utils.data.DataLoader(
             test_dataset, batch_size=64, shuffle=False, num_workers=4)
