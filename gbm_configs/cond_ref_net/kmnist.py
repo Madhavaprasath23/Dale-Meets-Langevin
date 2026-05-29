@@ -13,8 +13,10 @@ def get_config_training():
     training_config.transforms = transforms.Compose([
         transforms.ToTensor()
     ])
-    training_config.transforms=K_Mnist(path='mnist_exps/data/K-mnist/kmnist-train-imgs.npz',transform=training_config.transforms)
-    training_config.multi_gpu_training-False
+    training_config.transforms=datasets.KMNIST(
+        root='./data',train=True,download=True,transform=training_config.transforms
+    )
+    training_config.multi_gpu_training=False
     training_config.n_iters = 100000
     training_config.snapshot_freq = 5000
     training_config.N = N = 1000

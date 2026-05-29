@@ -45,11 +45,11 @@ def get_config_sampling(path):
     def update_configs(sampling_config):
         if sampling_config.sampler_mode == 'ums':
             if sampling_config.start_from_average:
-                delta = 0.0003359818286283781
+                delta = 2.59294380e-04
                 L = 3
                 anneal_factor = 0.9995
             else:
-                delta = 0.00021131578947368424
+                delta = 0.001467799267622069
                 L = 3
                 anneal_factor = 0.9995
         elif sampling_config.sampler_mode == 'dls':
@@ -68,7 +68,6 @@ def get_config_sampling(path):
     sampling_config.path = path
     sampling_config.batch_size=batch_size = 32
     sampling_config.num_gpus=1
-    sampling_config.device = device
     sampling_config.data_set = 'fashion-mnist'
     sampling_config.save_path = "logs"
     sampling_config.shape = (batch_size,1,28,28)

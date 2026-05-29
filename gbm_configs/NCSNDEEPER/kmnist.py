@@ -14,9 +14,8 @@ def get_config_training():
     training_config.transforms = transforms.Compose([
         transforms.ToTensor()
     ])
-    training_config.dataset=K_Mnist(
-        path = 'data/KMNIST/kmnist-train-imgs.npz',
-        transform = training_config.transforms
+    training_config.transforms=datasets.KMNIST(
+        root='./data',train=True,download=True,transform=training_config.transforms
     )
     training_config.multi_gpu_training=False
     training_config.batch_size = 128
@@ -69,7 +68,6 @@ def get_config_sampling(path):
     sampling_config.path = path
     sampling_config.batch_size=batch_size = 32
     sampling_config.num_gpus=1
-    sampling_config.device = device
     sampling_config.data_set = 'kmnist'
     sampling_config.save_path = "logs"
     sampling_config.shape = (batch_size,1,28,28)
