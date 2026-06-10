@@ -1,6 +1,5 @@
 # Dale Meets Langevin A Multiplicative Denoising Diffusion Model
 
-Pytorch Implementation for the paper Dale Meets Langevin, https://arxiv.org/pdf/2510.02730
 
 *This repository is extended from the [NCSNv3 repository by Song et al.](https://github.com/yang-song/score_sde_pytorch)*
 
