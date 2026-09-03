@@ -44,10 +44,17 @@ def load_class_avg_tensors(folder, to_device: str = 'cpu'):
     tensors = []
     for p in pngs:
         with Image.open(p) as im:
-            im = im.convert('RGB')
+            
+            if im.size[0] == 28 and im.size[1] == 28:
+                im = im.convert('L')
+            else:
+                im = im.convert('RGB')
             arr = np.array(im, dtype=np.float32) / 255.0
+            if arr.ndim == 2:  # grayscale
+                t = torch.from_numpy(arr).unsqueeze(0).contiguous()  # Shape: (1, H, W)
+            else:  # RGB
+                t = torch.from_numpy(arr).permute(2, 0, 1).contiguous()
             # HWC -> CHW
-            t = torch.from_numpy(arr).permute(2, 0, 1).contiguous()
             tensors.append(t)
     device = torch.device(to_device)
     tensors = [t.to(device) for t in tensors]
@@ -135,6 +142,23 @@ def sample_one_step_no_hacks(test_image, model, device, save_path, mu, sigmas, N
     with torch.no_grad():
         if data_set != 'cifar10':
             if config.start_from_average:
+                x_now = load_class_avg_tensors(Path(f'logs/class_average_images/{data_set.lower()}'), to_device=device)
+                x_now = torch.stack(x_now)
+                num_classes = x_now.shape[0]
+                x_now = x_now.unsqueeze(0).repeat(batch_size//num_classes, 1, 1,1, 1)
+                x_now = x_now.view(-1,1,28,28)
+                if x_now.shape[0] < batch_size:
+                    remaining = batch_size - x_now.shape[0]
+                    x_now = torch.cat((x_now,x_now[:remaining]),dim=0)
+                    print(f"Repeating {remaining} samples to match batch size")
+                
+                x_now = x_now + 1.0
+                t = torch.full((x_now.shape[0],), 999,
+                                    dtype=torch.long).to(device)
+                
+                x_now = forward_sde_gbm_fast(mu=torch.tensor(mu_fit).to(device),sigma=torch.tensor(sigma_fit).to(device),x_now=x_now,t=torch.tensor([999]).to(device),N=N,device=device)
+                
+                x_now = x_now.to(device)
 
             else:
                 mu_fit, sigma_fit = mu_fit,sigma_fit
@@ -367,7 +391,6 @@ def optimal_sampler(config):
     mu = 0.5 * sigmas ** 2
     total_samples = []
     steps_to_sample = math.ceil(config.num_samples/(config.batch_size))
-
     delta = config.delta
     L = config.L
     constant = config.constant
@@ -386,7 +409,10 @@ def optimal_sampler(config):
     for cur_step in range(steps_to_sample):
         temp = sample_one_step_no_hacks(test_image=test_image, model=model, device=config.device, mu=mu, sigmas=sigmas,data_set=config.data_set,
                                         N=N, delta=delta, save_path=save_path, batch_size=batch_size, show=show, L=L,constant=constant,current_step=cur_step,do_tweedie=do_tweedie,sampler_mode=sampler_mode,
-                                        mu_fit=config.mu_fit,sigma_fit=config.sigma_fit,config=config,show_text=config.show_intermediate)
+                                       mu_fit=config.mu_fit,sigma_fit=config.sigma_fit,config=config,show_text=config.show_intermediate)
+        config.rank = dist.get_rank() if config.multi_gpu else 0
+
+        
         if temp is None:
             return None
         if total_samples == []:
