@@ -4,10 +4,28 @@ from torch.optim import Adam
 from torchvision import datasets
 import ml_collections
 import torch
-from torch.utils.tensorboard import SummaryWriter
 from utils import *
 import yaml
 from models.ncsndeeper.ncsn import NCSNdeeper
+
+
+def update_configs(sampling_config):
+    if sampling_config.sampler_mode == 'aums':
+        if sampling_config.start_from_average:
+            delta = 2.59294380e-04
+            L = 3
+            anneal_factor = 0.9995
+        else:
+            delta = 0.001467799267622069
+            L = 3
+            anneal_factor = 0.9995
+    elif sampling_config.sampler_mode == 'adls':
+            delta = 0.0005862727272727274
+            L = 1
+            anneal_factor = 0.995
+    sampling_config.delta = delta
+    sampling_config.L = L
+    sampling_config.anneal_factor = anneal_factor
 
 
 
@@ -20,7 +38,14 @@ def get_config_training():
         root='./data',train=True,download=True,transform=training_config.transforms
     )
     training_config.multi_gpu_training=False
-    training_config.N = 1000
+
+    training_config.N = N = 1000
+    training_config.delta = 1/training_config.N
+    training_config.sigma = sigmas =0.8* torch.ones(N)
+    training_config.mu = 0.5 * sigmas ** 2
+    training_config.n_iters = 300001
+
+
     training_config.batch_size = 128
     training_config.config_path = "yamal_configs/NCSNDEEPER/mnist.yml"
     training_config.config = get_config_path(training_config.config_path)
@@ -28,37 +53,33 @@ def get_config_training():
     training_config.grad_accum = training_config.batch_size//training_config.batch_size
     training_config.save_at_steps = 5000
     training_config.data_set = 'fashion-mnist'
-    training_config.optim = Adam
+    
+    training_config.optim = ml_collections.ConfigDict()
+    training_config.optim.opt = Adam
+    training_config.optim.lr = 0.0001
+    training_config.optim.weight_decay = 0.000
+    training_config.optim.beta1 = 0.9
+    training_config.optim.eps = 0.00000001
+    training_config.optim.warmup = 0
+    training_config.optim.grad_clip = 0
+
+
+
     training_config.run_name = "fashion-mnist_runs"
+    training_config.save_path = "logs"
     training_config.continue_model_path = None
     training_config.continue_model_step = 0
     training_config.summary_writer = None
     training_config.do_warmup_continue = False
+
     training_config.num_gpus=1
-    training_config.delta = 1/training_config.N
     training_config.summary_log_dir='runs/fashion-mnist'
-    training_config.summary_writer = SummaryWriter(log_dir=training_config.summary_log_dir)
+
+    training_config.summary_writer = None
     return training_config
 
 #TODO figure out a way to put sampling parameters in Ls and delta 
 def get_config_sampling(path):
-    def update_configs(sampling_config):
-        if sampling_config.sampler_mode == 'ums':
-            if sampling_config.start_from_average:
-                delta = 2.59294380e-04
-                L = 3
-                anneal_factor = 0.9995
-            else:
-                delta = 0.001467799267622069
-                L = 3
-                anneal_factor = 0.9995
-        elif sampling_config.sampler_mode == 'dls':
-            delta = 0.0005862727272727274
-            L = 1
-            anneal_factor = 0.995
-        sampling_config.delta = delta
-        sampling_config.L = L
-        sampling_config.anneal_factor = anneal_factor
 
     sampling_config = ml_collections.ConfigDict()
     sampling_config.config_path = "yamal_configs/NCSNDEEPER/mnist.yml"

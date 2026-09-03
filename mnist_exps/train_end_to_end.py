@@ -110,16 +110,17 @@ def train_model(config):
         drop_last=False
     )
 
-    if config.data_set not in ['fmnist','mnist','K-mnist']:
+    if 'mnist' not in config.data_set:
         model_config = config.config_module()
         model = model_class(config=model_config).to(config.rank)
     else:
-        config = config.config
-        model = model_class(config=config)
+        model_config = config.config
+        model = model_class(config=model_config)
+
+    model = model.to(local_rank)    
     if config.multi_gpu_training:
         model = DDP(model, device_ids=[local_rank])
-    else:
-        model = model.to(config.device)
+
     if config.continue_model_path is not None:
             sd = torch.load(config.continue_model_path)['model_state_dict']
             try:
@@ -200,8 +201,6 @@ def train_model(config):
             tqdm.write(f"Loss: {loss.item():.6f}")
             if local_rank == 0:
                 if loss > max_till_now:
-                    print("Loss is too high")
-                    print(f"t: {t}")
                     config.summary_writer.add_scalar(
                         f"t/{ema_step}", t.min().item(), step)
                     max_till_now = loss

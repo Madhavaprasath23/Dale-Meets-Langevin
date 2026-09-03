@@ -1,6 +1,5 @@
 import os
 import warnings
-os.environ['CUDA_VISIBLE_DEVICES']='1,2,3,4,5'
 
 # Suppress TensorFlow C++ warnings and info logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -184,15 +183,13 @@ def main():
             total_samples_gpu = run_distributed(config,args.num_gpus,args.port,run_sampler)
 
             
-            #all gather the samples from different gpus and save
-            print("saving")
-            """total_samples = [torch.zeros_like(total_samples_gpu) for _ in range(config.num_gpus)]
+
+            total_samples = [torch.zeros_like(total_samples_gpu) for _ in range(config.num_gpus)]
             torch.distributed.all_gather(total_samples,total_samples_gpu)
-            total_samples = torch.cat(total_samples,dim=0)"""
+            total_samples = torch.cat(total_samples,dim=0)
         else:
             total_samples = run_sampler(config)
         
-        #total_samples = total_samples[:config.num_samples].detach().cpu()
 
         if args.mode == 'calculate_fid':
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -207,9 +204,6 @@ def main():
                 f.write(f'FID: {fid.item()}\n')
                 f.write(f'KID: {kid.item()}\n')
         
-        #if args.save_samples:
-        #   batch_save_tensors(total_samples,config.save_path)
-
             
     elif args.mode == 'nearest_neighbors':
         #load the generated samples and calculate nearest neighbors from the training set
