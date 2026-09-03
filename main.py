@@ -1,5 +1,6 @@
 import os
 import warnings
+os.environ['CUDA_VISIBLE_DEVICES']='1,2,3,4,5'
 
 # Suppress TensorFlow C++ warnings and info logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -18,11 +19,15 @@ from gbm_configs.cond_ref_net.fmnist import get_config_training as get_config_tr
 from gbm_configs.cond_ref_net.mnist import get_config_training as get_config_training_cond_mnist
 from gbm_configs.cond_ref_net.kmnist import get_config_training as get_config_training_cond_kmnist
 
+
 from gbm_configs.NCSNDEEPER.fmnist import get_config_training as get_config_training_ncsndeeper_fmnist
 from gbm_configs.NCSNDEEPER.mnist import get_config_training as get_config_training_ncsndeeper_mnist
 from gbm_configs.NCSNDEEPER.kmnist import get_config_training as get_config_training_ncsndeeper_kmnist
 from gbm_configs.NCSNV3.cifar10 import get_config_training as get_config_training_ncsnv3_cifar10
 
+from gbm_configs.NCSNDEEPER.fmnist import update_configs as update_configs_fmnist_ncsn_deeper
+from gbm_configs.NCSNDEEPER.mnist import update_configs as update_config_mnist_ncsn_deeper
+from gbm_configs.NCSNDEEPER.kmnist import update_configs as update_config_kmnist_ncsn_deeper
 
 from gbm_configs.cond_ref_net.fmnist import get_config_sampling as get_config_sampling_cond_fmnist
 from gbm_configs.cond_ref_net.mnist import get_config_sampling as get_config_sampling_cond_mnist
@@ -141,10 +146,20 @@ def main():
         config = config(args.model_path)
         config.multi_gpu = args.num_gpus > 1
         config.sampler_mode = args.sampler_mode
+        
+        if args.model=='ncsn_deeper':
+            if args.dataset=='mnist':
+                update_config_mnist_ncsn_deeper(config)
+            elif args.dataset=='kmnist':
+                update_config_kmnist_ncsn_deeper(config)
+            elif args.dataset=='fmnist':
+                update_configs_fmnist_ncsn_deeper(config)
+                
 
         config.batch_size= args.sampler_batch_size if args.num_of_samples >= args.sampler_batch_size else args.num_of_samples
         config.num_samples = args.num_of_samples
         config.save_path = args.save_path
+        steps_to_sample = math.ceil(config.num_samples/(config.batch_size))
         config.show = False
         try:
             os.makedirs(config.save_path,exist_ok=True)
@@ -167,7 +182,10 @@ def main():
             config.port = args.port
 
             total_samples_gpu = run_distributed(config,args.num_gpus,args.port,run_sampler)
+
+            
             #all gather the samples from different gpus and save
+            print("saving")
             """total_samples = [torch.zeros_like(total_samples_gpu) for _ in range(config.num_gpus)]
             torch.distributed.all_gather(total_samples,total_samples_gpu)
             total_samples = torch.cat(total_samples,dim=0)"""
@@ -189,8 +207,10 @@ def main():
                 f.write(f'FID: {fid.item()}\n')
                 f.write(f'KID: {kid.item()}\n')
         
-        """if args.save_samples:
-            batch_save_tensors(total_samples,config.save_path)"""
+        #if args.save_samples:
+        #   batch_save_tensors(total_samples,config.save_path)
+
+            
     elif args.mode == 'nearest_neighbors':
         #load the generated samples and calculate nearest neighbors from the training set
         config = get_sampler_config(args)
